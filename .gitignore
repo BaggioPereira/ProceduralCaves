@@ -79,3 +79,7 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+*.ide-wal
+.vs/ProceduralCaves/v15/Server/sqlite3/storage.ide-shm
+*.lock
+*.ide
