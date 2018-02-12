@@ -4,13 +4,129 @@ using UnityEngine;
 
 public class MeshGenerator : MonoBehaviour {
     public SquareGrid SqrGrid;
+    List<Vector3> Vertices;
+    List<int> Triangles;
 
     public void GenerateMesh(int[,] Map, float SquareSize)
     {
         SqrGrid = new SquareGrid(Map, SquareSize);
+        Vertices = new List<Vector3>();
+        Triangles = new List<int>();
+
+        for (int x = 0; x < SqrGrid.Squares.GetLength(0); x++)
+        {
+            for (int y = 0; y < SqrGrid.Squares.GetLength(1); y++)
+            {
+                TriangulateSquare(SqrGrid.Squares[x, y]);
+            }
+        }
+
+        Mesh mesh = new Mesh();
+        GetComponent<MeshFilter>().mesh = mesh;
+
+        mesh.vertices = Vertices.ToArray();
+        mesh.triangles = Triangles.ToArray();
+        mesh.RecalculateNormals();
     }
 
-    void OnDrawGizmos()
+    void TriangulateSquare(Square Square)
+    {
+        switch (Square.Configuration)
+        {
+            case 0:
+                break;
+
+            // 1 points:
+            case 1:
+                MeshFromPoints(Square.CentreBottom, Square.BottomLeft, Square.CentreLeft);
+                break;
+            case 2:
+                MeshFromPoints(Square.CentreRight, Square.BottomRight, Square.CentreBottom);
+                break;
+            case 4:
+                MeshFromPoints(Square.CentreTop, Square.TopRight, Square.CentreRight);
+                break;
+            case 8:
+                MeshFromPoints(Square.TopLeft, Square.CentreTop, Square.CentreLeft);
+                break;
+
+            // 2 points:
+            case 3:
+                MeshFromPoints(Square.CentreRight, Square.BottomRight, Square.BottomLeft, Square.CentreLeft);
+                break;
+            case 6:
+                MeshFromPoints(Square.CentreTop, Square.TopRight, Square.BottomRight, Square.CentreBottom);
+                break;
+            case 9:
+                MeshFromPoints(Square.TopLeft, Square.CentreTop, Square.CentreBottom, Square.BottomLeft);
+                break;
+            case 12:
+                MeshFromPoints(Square.TopLeft, Square.TopRight, Square.CentreRight, Square.CentreLeft);
+                break;
+            case 5:
+                MeshFromPoints(Square.CentreTop, Square.TopRight, Square.CentreRight, Square.CentreBottom, Square.BottomLeft, Square.CentreLeft);
+                break;
+            case 10:
+                MeshFromPoints(Square.TopLeft, Square.CentreTop, Square.CentreRight, Square.BottomRight, Square.CentreBottom, Square.CentreLeft);
+                break;
+
+            // 3 point:
+            case 7:
+                MeshFromPoints(Square.CentreTop, Square.TopRight, Square.BottomRight, Square.BottomLeft, Square.CentreLeft);
+                break;
+            case 11:
+                MeshFromPoints(Square.TopLeft, Square.CentreTop, Square.CentreRight, Square.BottomRight, Square.BottomLeft);
+                break;
+            case 13:
+                MeshFromPoints(Square.TopLeft, Square.TopRight, Square.CentreRight, Square.CentreBottom, Square.BottomLeft);
+                break;
+            case 14:
+                MeshFromPoints(Square.TopLeft, Square.TopRight, Square.BottomRight, Square.CentreBottom, Square.CentreLeft);
+                break;
+
+            // 4 point:
+            case 15:
+                MeshFromPoints(Square.TopLeft, Square.TopRight, Square.BottomRight, Square.BottomLeft);
+                break;
+        }
+    }
+
+    void MeshFromPoints(params Node[] Points)
+    {
+        AssignVertices(Points);
+
+        if (Points.Length >= 3)
+            CreateTriangle(Points[0], Points[1], Points[2]);
+        if (Points.Length >= 4)
+            CreateTriangle(Points[0], Points[2], Points[3]);
+        if (Points.Length >= 5)
+            CreateTriangle(Points[0], Points[3], Points[4]);
+        if (Points.Length >= 6)
+            CreateTriangle(Points[0], Points[4], Points[5]);
+    }
+
+    void AssignVertices(Node[] points)
+    {
+        for (int i = 0; i < points.Length; i++)
+        {
+            if (points[i].VertexIndex == -1)
+            {
+                points[i].VertexIndex = Vertices.Count;
+                Vertices.Add(points[i].Position);
+            }
+        }
+    }
+
+    void CreateTriangle(Node a, Node b, Node c)
+    {
+        Triangles.Add(a.VertexIndex);
+        Triangles.Add(b.VertexIndex);
+        Triangles.Add(c.VertexIndex);
+    }
+
+
+
+    /*void OnDrawGizmos()
     {
         if (SqrGrid != null)
         {
@@ -41,7 +157,7 @@ public class MeshGenerator : MonoBehaviour {
                 }
             }
         }
-    }
+    }*/
 
     public class SquareGrid
     {
@@ -82,6 +198,7 @@ public class MeshGenerator : MonoBehaviour {
 
         public ControlNode TopLeft, TopRight, BottomRight, BottomLeft;
         public Node CentreTop, CentreRight, CentreBottom, CentreLeft;
+        public int Configuration;
 
         public Square(ControlNode _topLeft, ControlNode _topRight, ControlNode _bottomRight, ControlNode _bottomLeft)
         {
@@ -94,6 +211,16 @@ public class MeshGenerator : MonoBehaviour {
             CentreRight = BottomRight.Above;
             CentreBottom = BottomLeft.Right;
             CentreLeft = BottomLeft.Above;
+
+            if (TopLeft.Active)
+                Configuration += 8;
+            if (TopRight.Active)
+                Configuration += 4;
+            if (BottomRight.Active)
+                Configuration += 2;
+            if (BottomLeft.Active)
+                Configuration += 1;
+
         }
     }
 
